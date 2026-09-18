@@ -1,8 +1,7 @@
-# Testing page scraping tooling
+# Page scraping tooling
 from trafilatura import fetch_url, extract
 
-url = "https://www.linkedin.com/jobs/view/4464317865/"
-page = fetch_url(url)
-
-result = extract(page)
-print(result)
+def get_text(url: str):
+  page = fetch_url(url)
+  result = extract(page)
+  return str(result)
