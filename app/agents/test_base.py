@@ -8,9 +8,9 @@ async def main():
   agent = llamaAgent(
     system_prompt="Extract the person's first and last name from the given text.",
   )
-  result = await agent.call(
+  result = agent.call(
     "Hi, my name is Ada Lovelace and I'm reaching out about the job posting.",
-    format=Test,
+    output_format=Test,
   )
   print(result)
   assert result.first_name == "Ada"
