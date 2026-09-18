@@ -1,67 +1,72 @@
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Dict
 from dotenv import load_dotenv
 from pydantic import BaseModel
-import anthropic
-import os
+from ollama import chat
+#import os
 
 # Login to claude API
-load_dotenv()
-API_KEY = os.getenv("ANTHROPIC-API")
-client = anthropic.AsyncAnthropic(api_key=API_KEY)
+#load_dotenv()
+#API_KEY = os.getenv("ANTHROPIC-API")
+#client = anthropic.AsyncAnthropic(api_key=API_KEY)
 
 schema = TypeVar("schema", bound=BaseModel)
 
 # Base agent class which agents inherit from
-class ClaudeAgent:
+class llamaAgent:
   def __init__(
     self,
-    agent_name: str,
     system_prompt: str,
-    model: str = "claude-haiku-4-5",
+    model: str = "llama3.1",
   ):
-    self.agent_name = agent_name
     self.system_prompt = system_prompt
     self.model = model
 
-  # Calls the messaging API
+  # Calls the API
   async def call(
     self,
-    user_content: str,
-    output_format: Type[schema] = None,
-    tools: list = None,
-    max_tokens: int = 1000,
+    content: str,
+    format: Type[schema] = None,
+    tools: Dict = None
   ):
-    # Allows for calls to optionally use tools
     kwargs = {}
-    if tools:
-      kwargs["tools"] = tools
+    if format:
+      kwargs["format"] = format
 
-    # When using pydantic models for output validation, need to call messages.parse instead of create
-    if output_format:
-      response = await client.messages.parse(
-        model=self.model,
-        max_tokens=max_tokens,
-        system=self.system_prompt,
-        messages=[{
-          "role": "user",
-          "content": user_content
-        }],
-        output_format=output_format,
-        **kwargs,
-      )
-      return response.parsed_output
-
-    response = await client.messages.create(
-      model=self.model,
-      max_tokens=max_tokens,
-      system=self.system_prompt,
-      messages=[{
+    messages = [
+      {
+        "role": "system",
+        "content": self.system_prompt
+      },
+      {
         "role": "user",
-        "content": user_content
-      }],
-      **kwargs,
-    )
-    return response.content[0].text
+        "content": content
+      }
+    ]
 
-  
-      
+    # Optional tool calling
+    if tools:
+      # Loop calling tools until the model stops requesting them
+      while True:
+        response = await chat(
+          model=self.model,
+          messages=messages,
+          tools=list(tools)
+        )
+        messages.append(response.message)
+
+        if not response.message.tool_calls:
+          break
+
+        for tool_call in response.message.tool_calls:
+          if tool_call.function.name in tools:
+            result = tools[tool_call.function.name](**tool_call.function.arguments)
+            messages.append({'role': 'tool', 'tool_name': tool_call.function.name, 'content': str(result)})
+
+    # Output formating, if needed, is applied on the final call, once tool calling is done
+    response = await chat(
+      model=self.model,
+      messages=messages,
+      **kwargs,        
+    )
+
+    return response.message.content
