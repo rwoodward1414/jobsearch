@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from base import llamaAgent
+from agents.base import llamaAgent
 from schema.job import Job
 from tools.pagescrap import get_text
 
@@ -17,9 +17,9 @@ job_extractor = llamaAgent(
 )
 
 
-async def extract_job(url: str) -> Job:
-  return await job_extractor.call(
+def extract_job(url: str) -> Job:
+  return job_extractor.call(
     f"Extract the job posting details from this URL: {url}",
-    format=Job,
+    output_format=Job,
     tools={'get_text': get_text,},
   )

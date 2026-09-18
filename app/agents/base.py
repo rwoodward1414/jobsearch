@@ -51,7 +51,7 @@ class llamaAgent:
           response = chat(
             model=self.model,
             messages=messages,
-            tools=list(tools)
+            tools=tools.values()
           )
         except ResponseError as e:
           raise RuntimeError(f"Ollama chat request failed: {e}") from e
