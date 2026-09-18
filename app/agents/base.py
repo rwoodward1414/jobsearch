@@ -17,26 +17,22 @@ class llamaAgent:
     self,
     system_prompt: str,
     model: str = "llama3.1",
-    tools: Dict = None
   ):
     self.system_prompt = system_prompt
     self.model = model
-    self.tools = tools
 
   # Calls the API
   async def call(
     self,
     content: str,
     format: Type[schema] = None,
+    tools: Dict = None
   ):
-    # Optional tool calling and output formating
     kwargs = {}
-    if self.tools:
-      kwargs["tools"] = list(self.tools)
     if format:
-      kwargs["format"] = format.model_json_schema()
+      kwargs["format"] = format
 
-    messages=[
+    messages = [
       {
         "role": "system",
         "content": self.system_prompt
@@ -45,29 +41,32 @@ class llamaAgent:
         "role": "user",
         "content": content
       }
-    ],
+    ]
 
+    # Optional tool calling
+    if tools:
+      # Loop calling tools until the model stops requesting them
+      while True:
+        response = await chat(
+          model=self.model,
+          messages=messages,
+          tools=list(tools)
+        )
+        messages.append(response.message)
+
+        if not response.message.tool_calls:
+          break
+
+        for tool_call in response.message.tool_calls:
+          if tool_call.function.name in tools:
+            result = tools[tool_call.function.name](**tool_call.function.arguments)
+            messages.append({'role': 'tool', 'tool_name': tool_call.function.name, 'content': str(result)})
+
+    # Output formating, if needed, is applied on the final call, once tool calling is done
     response = await chat(
       model=self.model,
       messages=messages,
-      **kwargs,
-    )
-    if response.message.tool_calls:
-      self.tool_calling(messages, response)
-    else:
-      return response.message.content
-
-  # Handles tool calling
-  async def tool_calling(self, messages: Dict, response: Dict):
-    messages.append(response.message)
-    for tool_call in response.message.tool_calls:
-      if tool_call.function.name in self.tools:
-        result = self.tools[tool_call.function.name](**tool_call.function.arguments)
-        messages.append({'role': 'tool', 'tool_name': tool_call.function.name, 'content': str(result)})
-
-    final_response = await chat(
-      model=self.model,
-      messages=messages
+      **kwargs,        
     )
 
-    return final_response.message.content
+    return response.message.content
