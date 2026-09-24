@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from sqlmodel import SQLModel, Field
 from typing import List
 
 class Job(BaseModel):
@@ -10,3 +11,8 @@ class Job(BaseModel):
   responsibilities: List[str]
   keywords: List[str]
 
+class JobListing(SQLModel, table=True):
+  id: int | None = Field(default=None, primary_key=True)
+  job_title: str
+  company: str
+  url: str
