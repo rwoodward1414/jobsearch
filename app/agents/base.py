@@ -75,6 +75,7 @@ class llamaAgent:
     except ResponseError as e:
       raise RuntimeError(f"Ollama chat request failed: {e}") from e
 
+    # Validate output format
     if output_format:
       try:
         return output_format.model_validate_json(response.message.content)
@@ -82,4 +83,5 @@ class llamaAgent:
         raise RuntimeError(
           f"Model response did not match {output_format.__name__} schema: {response.message.content}"
         ) from e
+      
     return response.message.content
