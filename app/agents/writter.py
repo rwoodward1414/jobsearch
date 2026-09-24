@@ -32,11 +32,18 @@ class BaseWriter(ABC):
     )
     return self.draft
 
+  def get_draft(self):
+    return self.draft
+
+  def get_draft_text(self):
+    draft_text = self.draft.model_dump_json() if self.output_format else self.draft
+    return draft_text
+
 
 class ResumeWriter(BaseWriter):
   system_prompt = (
-    "You write resumes tailored to a specific job posting, based on the "
-    "candidate's master resume. Return the resume as structured data matching "
+    "You write resumes tailored to a specific job posting, using the "
+    "candidate's master resume as a base. Return the resume as structured data matching "
     "the given schema. When given feedback on a draft, revise it to address "
     "the feedback while keeping everything else unchanged."
   )
